@@ -48,7 +48,7 @@ function getDetail($getDetail_url){
     }
 }
 function grab($grab_url){
-    $cookie = '/home/izul/Downloads/toomics.com_cookies.txt';
+    $cookie = './toomics.com_cookies.txt';
     $ch = curl_init();
 
     curl_setopt($ch, CURLOPT_URL, $grab_url);
