@@ -1,0 +1,72 @@
+<?php
+set_time_limit(0);
+$start = microtime(true);
+$url = $argv[1];
+getEpisode($url);
+if(strpos($url, 'episode') !== false){
+    getDetail($url);
+}elseif(strpos($url, 'detail') !== false){
+    getEpisode($url);
+}else{
+    echo 'masukan url!!!';die();
+}
+$end = microtime(true);
+$time = number_format(($end - $start), 2);
+echo 'This page loaded in ', $time, ' seconds'.PHP_EOL;
+
+function getEpisode($getEpisode_url){
+    $data = grab($getEpisode_url);
+    preg_match('/<title>(.*?) (EP (\d+)|Prologue|Epilogue) - Toomics/',$data,$ttl);
+    preg_match_all('/data-src="(.*?)"/',$data,$ep);
+    unset($ttl[0]);
+    if(isset($ttl[3])){
+        unset($ttl[2]);
+    }
+
+    $title = implode('_',$ttl);
+    foreach($ep[1] as $k => $v){
+        $dir = "./".$ttl[1]."/$title/{$k}.jpg";
+        (!is_dir("./".$ttl[1]."/$title/"))?mkdir("./".$ttl[1]."/$title/", 0700, true):'';
+        if(is_file($dir)){
+            echo "Skip: $dir".PHP_EOL;
+        }else{
+            $manga = grab($v);
+            file_put_contents($dir,grab($v));
+            if(exif_imagetype($dir)){
+                echo "Sukses: $dir".PHP_EOL;
+            }else{
+                unlink($dir);
+                echo "Gagal, Removing: $dir".PHP_EOL;
+            }
+        }
+    }
+}
+function getDetail($getDetail_url){
+    preg_match_all("/location.href='(\/en\/webtoon\/detail\/code\/(\d+)\/ep\/(\d+)\/toon\/(\d+))'/",grab($getDetail_url),$getDetail);
+    foreach($getDetail[1] as $episode){
+        getEpisode('https://toomics.com/'.$episode);
+    }
+}
+function grab($grab_url){
+    $cookie = '/home/izul/Downloads/toomics.com_cookies.txt';
+    $ch = curl_init();
+
+    curl_setopt($ch, CURLOPT_URL, $grab_url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
+
+    $headers = array();
+    $headers[] = 'Referer: https://toomics.com/en/';
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    curl_setopt($ch, CURLOPT_COOKIEFILE, $cookie);
+    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookie);
+
+    $result = curl_exec($ch);
+    if (curl_errno($ch)) {
+        echo "Error Grabbing: {$grab_url}".PHP_EOL;
+        //grab($grab_url);
+    }
+    curl_close($ch);
+    return $result;
+}
